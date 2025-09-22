@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tattoo Placement Form</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 24px; background: #0b0c0f; color: #e9eef6; }
+    .card { background: #11151b; border: 1px solid #1f2630; border-radius: 14px; padding: 16px; max-width: 700px; margin: 0 auto; }
+    svg { max-width: 100%; height: auto; display: block; margin: 12px auto; cursor: crosshair; }
+    #marker { fill: #ff3b30; stroke: #ffffff; stroke-width: 2; filter: drop-shadow(0 2px 2px rgba(0,0,0,.5)); }
+    .row { display: flex; gap: 12px; margin-top: 12px; }
+    .kv { font-family: monospace; background: #0d1117; border: 1px solid #30363d; padding: 6px 10px; border-radius: 8px; }
+    button { background: #2163ff; color: white; border: 1px solid #2163ff; border-radius: 10px; padding: 8px 12px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🎯 Tattoo Placement Form</h1>
+    <p>Click anywhere on the body to select placement. Coordinates will be saved automatically.</p>
+
+    <!-- your body SVG -->
+    <!-- NOTE: must be inline <svg>, not <img>. I added id="bodySvg" and a marker -->
+    <svg id="bodySvg" viewBox="0 0 200 600" xmlns="http://www.w3.org/2000/svg">
+      <path d="M100,20c22,0 40,18 40,40s-18,40-40,40s-40-18-40-40s18-40 40-40z" fill="#111"/>
+      <path d="M100,100v140" stroke="#111" stroke-width="4"/>
+      <path d="M100,130 L45,180 M100,130 L155,180" stroke="#111" stroke-width="4"/>
+      <path d="M100,240 L70,330 M100,240 L130,330" stroke="#111" stroke-width="4"/>
+      <path d="M70,330 L70,420 M130,330 L130,420" stroke="#111" stroke-width="4"/>
+      <circle id="marker" cx="-9999" cy="-9999" r="6" fill="#ff3b30" stroke="#fff" stroke-width="2"/>
+    </svg>
+
+    <!-- the form -->
+    <form id="tattooForm" action="/submit" method="POST">
+      <!-- hidden fields to capture coords -->
+      <input type="hidden" name="placement_x" id="placement_x">
+      <input type="hidden" name="placement_y" id="placement_y">
+
+      <!-- add your other form inputs here -->
+      <div class="row">
+        <label>Your name: <input type="text" name="name"></label>
+        <label>Email: <input type="email" name="email"></label>
+      </div>
+
+      <div class="row">
+        <button type="submit">Submit Placement</button>
+        <button type="button" id="reset">Reset</button>
+      </div>
+    </form>
+
+    <div class="row">
+      <div class="kv">x: <span id="kvx">—</span></div>
+      <div class="kv">y: <span id="kvy">—</span></div>
+    </div>
+  </div>
+
+  <script>
+  (function(){
+    function clientToSvg(svg, cx, cy){
+      const pt = svg.createSVGPoint(); pt.x=cx; pt.y=cy;
+      return pt.matrixTransform(svg.getScreenCTM().inverse());
+    }
+    function normalize(svg, x, y){
+      const vb = svg.viewBox.baseVal;
+      return { x:(x-vb.x)/vb.width, y:(y-vb.y)/vb.height };
+    }
+
+    const svg = document.getElementById('bodySvg');
+    const marker = document.getElementById('marker');
+    const kvx = document.getElementById('kvx');
+    const kvy = document.getElementById('kvy');
+    const ix = document.getElementById('placement_x');
+    const iy = document.getElementById('placement_y');
+    const reset = document.getElementById('reset');
+
+    svg.addEventListener('click', (e) => {
+      const p = clientToSvg(svg, e.clientX, e.clientY);
+      if(!p) return;
+      marker.setAttribute('cx', p.x);
+      marker.setAttribute('cy', p.y);
+      const n = normalize(svg, p.x, p.y);
+      kvx.textContent = n.x.toFixed(4);
+      kvy.textContent = n.y.toFixed(4);
+      ix.value = n.x.toFixed(6);
+      iy.value = n.y.toFixed(6);
+    });
+
+    reset.addEventListener('click', () => {
+      marker.setAttribute('cx', -9999);
+      marker.setAttribute('cy', -9999);
+      kvx.textContent = '—';
+      kvy.textContent = '—';
+      ix.value = '';
+      iy.value = '';
+    });
+  })();
+  </script>
+</body>
+</html>
