@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Tattoo Form</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 600px;
+      margin: auto;
+      padding: 20px;
+    }
+
+    label {
+      display: block;
+      margin: 15px 0 5px;
+    }
+
+    input, textarea, button {
+      width: 100%;
+      padding: 10px;
+      font-size: 1rem;
+      margin-bottom: 10px;
+    }
+
+    svg {
+      width: 100%;
+      max-width: 300px;
+      display: block;
+      margin: 20px auto;
+      cursor: pointer;
+    }
+
+    .body-part {
+      fill: #ccc;
+      transition: fill 0.3s, opacity 0.3s;
+    }
+
+    .body-part:hover {
+      fill: #007BFF;
+      opacity: 0.7;
+    }
+
+    .selected {
+      fill: #28a745 !important;
+      opacity: 1 !important;
+    }
+
+    .note {
+      font-size: 0.9em;
+      color: #555;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Tattoo Consultation Form</h1>
+
+  <form id="tattoo-form" method="POST" action="https://your-n8n-webhook-url.here">
+    <label for="name">Name</label>
+    <input name="name" required />
+
+    <label for="email">Email</label>
+    <input name="email" type="email" required />
+
+    <label for="budget">Budget ($)</label>
+    <input name="budget" type="number" required />
+
+    <label for="comment">Tattoo Idea / Comment</label>
+    <textarea name="comment" rows="4" required></textarea>
+
+    <div class="note">Click where you'd like the tattoo placed:</div>
+
+    <input type="hidden" name="placement" id="placement" required />
+
+    <svg id="bodyMap" viewBox="0 0 200 500">
+      <rect class="body-part" id="left-arm" x="20" y="100" width="30" height="120" />
+      <rect class="body-part" id="right-arm" x="150" y="100" width="30" height="120" />
+      <rect class="body-part" id="chest" x="70" y="100" width="60" height="100" />
+      <rect class="body-part" id="stomach" x="70" y="200" width="60" height="80" />
+      <rect class="body-part" id="left-leg" x="70" y="280" width="30" height="140" />
+      <rect class="body-part" id="right-leg" x="100" y="280" width="30" height="140" />
+    </svg>
+
+    <div class="note" id="selectedLabel">No placement selected yet.</div>
+
+    <button type="submit">Submit Form</button>
+  </form>
+
+  <script>
+    const parts = document.querySelectorAll('.body-part');
+    const placementInput = document.getElementById('placement');
+    const label = document.getElementById('selectedLabel');
+
+    parts.forEach(part => {
+      part.addEventListener('click', () => {
+        parts.forEach(p => p.classList.remove('selected'));
+        part.classList.add('selected');
+        placementInput.value = part.id;
+        label.textContent = "Selected placement: " + part.id.replace("-", " ");
+      });
+    });
+
+    document.getElementById("tattoo-form").addEventListener("submit", function(e) {
+      if (!placementInput.value) {
+        e.preventDefault();
+        alert("Please select a tattoo placement on the body.");
+      }
+    });
+  </script>
+
+</body>
+</html>
