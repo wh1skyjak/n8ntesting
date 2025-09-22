@@ -3,13 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Tattoo Placement – Free Click (Robust)</title>
+  <title>Tattoo Placement – Free Click (Resilient)</title>
   <style>
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; padding: 24px; background: #0b0c0f; color: #e9eef6; }
     .wrap { max-width: 900px; margin: 0 auto; }
     .card { background: #11151b; border: 1px solid #1f2630; border-radius: 14px; padding: 16px; }
     svg { max-width: 100%; height: auto; display: block; margin: 12px auto; }
     #bodySvg { cursor: crosshair; }
+    #marker { fill: #ff3b30; stroke: #ffffff; stroke-width: 2; filter: drop-shadow(0 2px 2px rgba(0,0,0,.5)); }
     .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
     .kv { font-family: ui-monospace, Menlo, Consolas, monospace; background: #0d1117; border: 1px solid #30363d; padding: 8px 10px; border-radius: 10px; }
     button { background: #2163ff; color: white; border: 1px solid #2163ff; border-radius: 10px; padding: 8px 12px; cursor: pointer; }
@@ -19,15 +20,13 @@
 <body>
   <div class="wrap">
     <div class="card">
-      <h1>🎯 Free-Click Tattoo Placement</h1>
       <p>Click anywhere on the body to drop a pin. Coordinates are saved normalized (0–1).</p>
-      <!-- Inline SVG -->
       <?xml version="1.0" encoding="iso-8859-1"?>
 <!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools -->
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <svg fill="#000000" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" 
 	 width="800px" height="800px" viewBox="0 0 206.326 206.326"
-	 xml:space="preserve" id="bodySvg">
+	 xml:space="preserve">
 <g>
 	<g>
 		<path d="M104.265,117.959c-0.304,3.58,2.126,22.529,3.38,29.959c0.597,3.52,2.234,9.255,1.645,12.3
@@ -63,8 +62,6 @@
 			c1.245-7.423,3.685-26.373,3.38-29.959l1.008,0.354C103.809,118.312,104.265,117.959,104.265,117.959z"/>
 	</g>
 </g>
-
-  <circle id="marker" cx="-9999" cy="-9999" r="6" fill="#ff3b30" stroke="#ffffff" stroke-width="2" />
 </svg>
       <div class="row">
         <div class="kv">x: <span id="kvx">—</span></div>
@@ -76,51 +73,67 @@
   </div>
   <script>
     (function(){
-      const svg = document.getElementById('bodySvg');
-      let marker = svg.querySelector('#marker');
-      if(!marker) {
-        marker = document.createElementNS('http://www.w3.org/2000/svg','circle');
-        marker.setAttribute('id','marker');
-        marker.setAttribute('r','6');
-        marker.setAttribute('cx','-9999');
-        marker.setAttribute('cy','-9999');
-        marker.setAttribute('fill','#ff3b30');
-        marker.setAttribute('stroke','#ffffff');
-        marker.setAttribute('stroke-width','2');
-        svg.appendChild(marker);
-      }
-      const kvx = document.getElementById('kvx');
-      const kvy = document.getElementById('kvy');
-      const json = document.getElementById('json');
-      const btn = document.getElementById('copy');
+      function init(){
+        // 1) Find the inline SVG
+        let svg = document.getElementById('bodySvg') || document.querySelector('svg');
+        if(!svg) { console.error('No inline <svg> found on the page. Make sure it\'s not an <img> or <object>.'); return; }
+        if(!svg.id) svg.id = 'bodySvg';
 
-      function clientToSvg(svg, clientX, clientY){
-        const pt = svg.createSVGPoint(); pt.x = clientX; pt.y = clientY;
-        const ctm = svg.getScreenCTM();
-        if(!ctm) { console.warn('No screen CTM'); return null; }
-        return pt.matrixTransform(ctm.inverse());
-      }
-      function normalize(svg, x, y){
-        const vb = svg.viewBox.baseVal;
-        if(!vb || vb.width === 0 || vb.height === 0) { console.warn('Missing/zero viewBox'); return {x:0,y:0}; }
-        return { x: (x - vb.x)/vb.width, y: (y - vb.y)/vb.height };
+        // 2) Ensure marker exists
+        let marker = svg.querySelector('#marker');
+        if(!marker) {
+          marker = document.createElementNS('http://www.w3.org/2000/svg','circle');
+          marker.setAttribute('id','marker');
+          marker.setAttribute('r','6');
+          marker.setAttribute('cx','-9999');
+          marker.setAttribute('cy','-9999');
+          marker.setAttribute('fill','#ff3b30');
+          marker.setAttribute('stroke','#ffffff');
+          marker.setAttribute('stroke-width','2');
+          svg.appendChild(marker);
+        }
+
+        // 3) Coordinate helpers
+        function clientToSvg(svg, clientX, clientY){
+          const pt = svg.createSVGPoint(); pt.x = clientX; pt.y = clientY;
+          const ctm = svg.getScreenCTM();
+          if(!ctm) { console.warn('No screen CTM'); return null; }
+          return pt.matrixTransform(ctm.inverse());
+        }
+        function normalize(svg, x, y){
+          const vb = svg.viewBox.baseVal;
+          if(!vb || vb.width === 0 || vb.height === 0) { console.warn('Missing/zero viewBox'); return {x:0,y:0}; }
+          return { x: (x - vb.x)/vb.width, y: (y - vb.y)/vb.height };
+        }
+
+        // 4) Click handler
+        const kvx = document.getElementById('kvx');
+        const kvy = document.getElementById('kvy');
+        const json = document.getElementById('json');
+        const btn = document.getElementById('copy');
+
+        svg.addEventListener('click', (e) => {
+          const p = clientToSvg(svg, e.clientX, e.clientY);
+          if(!p) return;
+          marker.setAttribute('cx', p.x);
+          marker.setAttribute('cy', p.y);
+          const n = normalize(svg, p.x, p.y);
+          kvx.textContent = n.x.toFixed(4);
+          kvy.textContent = n.y.toFixed(4);
+          json.textContent = JSON.stringify({x: n.x, y: n.y}, null, 2);
+          console.log('Clicked SVG point:', p, 'Normalized:', n);
+        });
+
+        btn.addEventListener('click', async () => {
+          try { await navigator.clipboard.writeText(json.textContent); } catch(e) { console.warn('Clipboard failed', e); }
+        });
       }
 
-      svg.addEventListener('click', (e) => {
-        const p = clientToSvg(svg, e.clientX, e.clientY);
-        if(!p) return;
-        marker.setAttribute('cx', p.x);
-        marker.setAttribute('cy', p.y);
-        const n = normalize(svg, p.x, p.y);
-        kvx.textContent = n.x.toFixed(4);
-        kvy.textContent = n.y.toFixed(4);
-        json.textContent = JSON.stringify({x: n.x, y: n.y}, null, 2);
-        console.log('Clicked SVG point:', p, 'Normalized:', n);
-      });
-
-      btn.addEventListener('click', async () => {
-        try { await navigator.clipboard.writeText(json.textContent); } catch(e) { console.warn('Clipboard failed', e); }
-      });
+      if(document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
     })();
   </script>
 </body>
